@@ -18,8 +18,10 @@ if(strtolower($url[0]) == "realtime"){
 
 	$data = json_decode(file_get_contents('php://input'), true);
 	$mois = $data["moisture"];
-	$db->inputRealTimeMoisture($mois);
-	$db->inputPeriodikMoisture($mois);
+	$hum = $data["humidity"];
+	$temp = $data["temperature"];
+	$db->inputRealTimeData($mois, $hum, $temp);
+	$db->inputPeriodikData($mois, $hum, $temp);
 	echo 'Data Yang anda posting';
 	var_dump($data);
 

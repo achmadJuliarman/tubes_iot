@@ -19,26 +19,28 @@ class Database{
 		echo json_encode(mysqli_fetch_all($query, MYSQLI_ASSOC));
 	}
 
-	function inputRealTimeMoisture($moisture){
+	function inputRealTimeData($moisture, $humidity, $temperature){
 		date_default_timezone_set("Asia/Jakarta");
 		$waktu = date("Y/m/d H:i:s");
 		$sql = "UPDATE realtime
 		SET moisture = '$moisture',
+		humidity = '$humidity',
+		temperature = '$temperature',
 		waktu = '$waktu'
 		WHERE id = 1";
 		mysqli_query($this->conn, $sql);
 	}
 
-	function inputPeriodikMoisture($moisture){
+	function inputPeriodikData($moisture, $humidity, $temperature){
 		date_default_timezone_set("Asia/Jakarta");
 		$waktu = date("Y/m/d H:i:s");
-		if($moisture >= 2500){
+		if($moisture >= 30){
 			$pump_status = "ON";
 		}else{
 			$pump_status = "OFF";
 		}
-		$sql = "INSERT INTO moisture_sensor (moisture, pump_status, waktu)
-		VALUES('$moisture', '$pump_status', '$waktu')";
+		$sql = "INSERT INTO moisture_sensor (moisture, humidity, temperature, pump_status, waktu)
+		VALUES('$moisture', '$humidity', '$temperature', '$pump_status', '$waktu')";
 		mysqli_query($this->conn, $sql);
 	}
 }
