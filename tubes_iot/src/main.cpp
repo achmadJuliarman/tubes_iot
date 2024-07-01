@@ -16,7 +16,6 @@ const int dhtPin = 4;
 const int dry = 30; // persen, dimana 2500 adalah 86 persen
 const int ON = 0;
 const int OFF = 1;
-const int maximumMois = 2900;
 
 void connectWifi();
 void getHttp();
@@ -99,7 +98,7 @@ void postMoisture(int moisture, int temp, int hum){
 
 void runPumpDC(int moisture, int temp){
 
-  if (persentaseMoisture(moisture) <= dry)
+  if (persentaseMoisture(moisture) >= dry)
   {
     Serial.println("hidup");
     digitalWrite(pumpPin, ON);
