@@ -12,20 +12,18 @@ String pass = "polygon.";
 const int moisPin = 34;
 const int pumpPin = 5;
 const int dhtPin = 4;
-// const int dry = 2500;
-const int dry = 30; // persen, dimana 2500 adalah 86 persen
 const int ON = 0;
 const int OFF = 1;
-
-void connectWifi();
-void getHttp();
-void postMoisture(int moisture, int temp, int hum);
-void runPumpDC(int moisture, int temp);
-int persentaseMoisture(int moisture);
 
 // object initialize
 #define DHTTYPE DHT11
 DHT_Unified dht(dhtPin, DHTTYPE);
+
+void connectWifi();
+void getHttp();
+void postMoisture(int moisture, int temp, int hum);
+void runPumpDC(int moisture, int hum);
+int persentaseMoisture(int moisture);
 
 void setup() {
   Serial.begin(9600);
@@ -36,30 +34,58 @@ void setup() {
 
 void loop() {
   int moisture = analogRead(moisPin);
-  sensors_event_t event;
-  dht.temperature().getEvent(&event);
-  int farmTemp = event.temperature;
   
-  dht.humidity().getEvent(&event);
-  int farmHum = event.relative_humidity;
+  sensors_event_t tempEvent;
+  dht.temperature().getEvent(&tempEvent);
+  int farmTemp = tempEvent.temperature;
   
-  // Serial.println(moisture);
-  Serial.println(farmHum);
-  runPumpDC(moisture, farmTemp);
+  sensors_event_t humEvent;
+  dht.humidity().getEvent(&humEvent);
+  int farmHum = humEvent.relative_humidity;
+  
+  runPumpDC(moisture, farmHum);
   postMoisture(persentaseMoisture(moisture), farmTemp, farmHum);
-  delay(1000);
+  
+  delay(2000); // Tambahkan delay untuk memberikan waktu bagi watchdog timer
 }
 
-void connectWifi(){
+void connectWifi() {
   WiFi.begin(ssid, pass);
   Serial.println();
-  Serial.println("Connecting to wifi");
-  while(WiFi.status() != WL_CONNECTED){
+  Serial.println("Connecting to WiFi...");
+  while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     delay(800);
   }
   Serial.println();
-  Serial.println("Success Connected to WiFi");
+  Serial.println("Successfully Connected to WiFi");
+}
+
+void postMoisture(int moisture, int temp, int hum) {
+  String url = "http://192.168.100.5/tubesIOT/api/post";
+  HTTPClient http;
+  http.begin(url);
+
+  StaticJsonDocument<200> doc;
+  doc["moisture"] = moisture;
+  doc["temperature"] = temp;
+  doc["humidity"] = hum;
+  
+  String params;
+  serializeJson(doc, params);
+
+  http.addHeader("Content-Type", "application/json");
+  int httpResponseCode = http.POST(params);
+
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.println(response);
+  } else {
+    Serial.print("Error on sending POST: ");
+    Serial.println(httpResponseCode);
+  }
+  
+  http.end();
 }
 
 void getHttp(){
@@ -78,36 +104,16 @@ void getHttp(){
 
 }
 
-void postMoisture(int moisture, int temp, int hum){
-  String url = "http://192.168.100.5/tubesIOT/api/post";
-  HTTPClient http;
-  JsonDocument doc;
-  String response;
-  String params;
-  doc["moisture"] = moisture;
-  doc["temperature"] = temp;
-  doc["humidity"] = hum;
-  http.begin(url);
-  serializeJson(doc, params);
-  http.POST(params);
-
-  response = http.getString();
-  Serial.println(response);
-  delay(1000);
-}
-
-void runPumpDC(int moisture, int temp){
-
-  if (persentaseMoisture(moisture) >= dry)
-  {
-    Serial.println("hidup");
+void runPumpDC(int moisture, int hum) {
+  if (persentaseMoisture(moisture) <= 60 || hum <= 55) {
+    Serial.println("Pompa hidup");
     digitalWrite(pumpPin, ON);
-  }else{
-    Serial.println("mati");
+  } else {
+    Serial.println("Pompa mati");
     digitalWrite(pumpPin, OFF);
   }
 }
 
-int persentaseMoisture(int moisture){
-  return (100 - (moisture/4095.00) * 100);
+int persentaseMoisture(int moisture) {
+  return (100 - (moisture / 4095.00) * 100);
 }
